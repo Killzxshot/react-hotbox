@@ -1,34 +1,37 @@
 import { useEffect, useCallback } from 'react';
 
+type KeyCombination = {
+  key: string;
+  ctrl?: boolean;
+  alt?: boolean;
+  shift?: boolean;
+};
+
 type HotkeyHandler = (event: KeyboardEvent) => void;
-type HotkeyMap = Map<string, HotkeyHandler>;
 
 export function createBasicHookImplementation() {
-  const hotkeyMap: HotkeyMap = new Map();
-  
-  const useHotkeys = (key: string, handler: HotkeyHandler) => {
-    useEffect(() => {
-      hotkeyMap.set(key, handler);
+  const useHotkeys = (
+    keyCombination: KeyCombination,
+    handler: HotkeyHandler
+  ) => {
+    const handleKeyDown = useCallback((event: KeyboardEvent) => {
+      const { key, ctrl, alt, shift } = keyCombination;
       
-      return () => {
-        hotkeyMap.delete(key);
-      };
-    }, [key, handler]);
-  };
-  
-  const handleKeyDown = useCallback((event: KeyboardEvent) => {
-    const handler = hotkeyMap.get(event.key);
-    if (handler) {
+      if (event.key.toLowerCase() !== key.toLowerCase()) return;
+      if (ctrl !== undefined && event.ctrlKey !== ctrl) return;
+      if (alt !== undefined && event.altKey !== alt) return;
+      if (shift !== undefined && event.shiftKey !== shift) return;
+      
       handler(event);
-    }
-  }, []);
-  
-  useEffect(() => {
-    window.addEventListener('keydown', handleKeyDown);
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [handleKeyDown]);
-  
+    }, [key, ctrl, alt, shift, handler]);
+
+    useEffect(() => {
+      window.addEventListener('keydown', handleKeyDown);
+      return () => {
+        window.removeEventListener('keydown', handleKeyDown);
+      };
+    }, [handleKeyDown]);
+  };
+
   return { useHotkeys };
 }

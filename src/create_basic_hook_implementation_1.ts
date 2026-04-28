@@ -1,26 +1,32 @@
 import { useEffect, useCallback } from 'react';
 
-type KeyboardEventCallback = (event: KeyboardEvent) => void;
+type HotkeyHandler = (event: KeyboardEvent) => void;
+type HotkeyMap = Map<string, HotkeyHandler>;
 
 export function createBasicHookImplementation() {
-  const useHotkeys = (
-    keyMap: Record<string, KeyboardEventCallback>,
-    deps: unknown[] = []
-  ) => {
-    const handleKeyDown = useCallback((event: KeyboardEvent) => {
-      const callback = keyMap[`${event.key.toLowerCase()}`];
-      if (callback) {
-        callback(event);
-      }
-    }, [keyMap]);
-
+  const hotkeyMap: HotkeyMap = new Map();
+  
+  const useHotkeys = (key: string, handler: HotkeyHandler) => {
+    const handlerCallback = useCallback(handler, []);
+    
     useEffect(() => {
+      hotkeyMap.set(key, handlerCallback);
+      
+      const handleKeyDown = (event: KeyboardEvent) => {
+        const handler = hotkeyMap.get(key);
+        if (handler) {
+          handler(event);
+        }
+      };
+      
       window.addEventListener('keydown', handleKeyDown);
+      
       return () => {
         window.removeEventListener('keydown', handleKeyDown);
+        hotkeyMap.delete(key);
       };
-    }, [handleKeyDown, ...deps]);
+    }, [key, handlerCallback]);
   };
-
+  
   return { useHotkeys };
 }
